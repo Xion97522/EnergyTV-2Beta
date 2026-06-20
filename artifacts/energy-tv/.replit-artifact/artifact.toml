@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "EnergyTV"
+version = "1.0.0"
+id = "artifacts/energy-tv"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22155
+
+[services.development]
+run = "pnpm --filter @workspace/energy-tv run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/energy-tv", "run", "build" ]
+publicDir = "artifacts/energy-tv/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22155"
+BASE_PATH = "/"

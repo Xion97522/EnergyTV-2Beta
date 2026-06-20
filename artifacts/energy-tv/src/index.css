@@ -1,0 +1,216 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --font-sans: var(--app-font-sans);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: 222 20% 5%;
+  --foreground: 0 0% 94%;
+  --border: 220 14% 14%;
+  --input: 220 14% 14%;
+  --ring: 112 100% 50%;
+  --card: 220 18% 7%;
+  --card-foreground: 0 0% 93%;
+  --popover: 220 18% 8%;
+  --popover-foreground: 0 0% 93%;
+  --primary: 112 100% 54%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 220 14% 11%;
+  --secondary-foreground: 0 0% 75%;
+  --muted: 220 14% 10%;
+  --muted-foreground: 220 8% 48%;
+  --accent: 220 14% 13%;
+  --accent-foreground: 0 0% 93%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --app-font-sans: 'GreenEnergy', system-ui, -apple-system, sans-serif;
+  --radius: 0.75rem;
+
+  /* Glass tint values */
+  --glass-bg:        rgba(8, 10, 16, 0.45);
+  --glass-bg-light:  rgba(255, 255, 255, 0.032);
+  --glass-border:    rgba(255, 255, 255, 0.075);
+  --glass-highlight: rgba(255, 255, 255, 0.09);
+  --glass-shadow:    0 8px 40px rgba(0,0,0,0.55);
+  --neon:            57, 255, 20;
+}
+
+@layer base {
+  * { @apply border-border; box-sizing: border-box; }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--app-font-sans);
+    -webkit-font-smoothing: antialiased;
+    background: #040508;
+  }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+}
+
+/* ─── Liquid Glass utilities ─────────────────────────────────────── */
+
+/* Base glass — dark tinted frosted surface */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(22px) saturate(170%) brightness(1.08);
+  -webkit-backdrop-filter: blur(22px) saturate(170%) brightness(1.08);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1.5px 0 var(--glass-highlight),
+    inset 0 -1px 0 rgba(0,0,0,0.25),
+    var(--glass-shadow);
+}
+
+/* Light glass — almost clear, for cards over rich imagery */
+.glass-light {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid rgba(255,255,255,0.055);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    0 4px 24px rgba(0,0,0,0.45);
+}
+
+/* Neon-tinted glass — panels, active states */
+.glass-neon {
+  background: linear-gradient(
+    145deg,
+    rgba(var(--neon), 0.07) 0%,
+    rgba(8, 10, 16, 0.55) 60%,
+    rgba(var(--neon), 0.03) 100%
+  );
+  backdrop-filter: blur(22px) saturate(200%);
+  -webkit-backdrop-filter: blur(22px) saturate(200%);
+  border: 1px solid rgba(var(--neon), 0.22);
+  box-shadow:
+    inset 0 1.5px 0 rgba(var(--neon), 0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.2),
+    0 0 32px rgba(var(--neon), 0.07),
+    0 8px 40px rgba(0,0,0,0.55);
+}
+
+/* Heavy blur modal */
+.glass-modal {
+  background: rgba(5, 7, 11, 0.72);
+  backdrop-filter: blur(48px) saturate(200%) brightness(0.95);
+  -webkit-backdrop-filter: blur(48px) saturate(200%) brightness(0.95);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.1),
+    inset 0 -1px 0 rgba(0,0,0,0.35),
+    0 30px 90px rgba(0,0,0,0.75),
+    0 0 0 1px rgba(var(--neon), 0.07);
+}
+
+/* Pill / chip glass */
+.glass-pill {
+  background: rgba(255,255,255,0.055);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+}
+
+/* Active nav pill */
+.glass-nav-active {
+  background: linear-gradient(135deg, rgba(var(--neon),0.18) 0%, rgba(var(--neon),0.08) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(var(--neon), 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--neon), 0.2),
+    0 0 14px rgba(var(--neon), 0.12);
+  color: hsl(112,100%,54%) !important;
+}
+
+/* Button: neon filled glass */
+.btn-neon {
+  background: linear-gradient(135deg, hsl(112,100%,54%) 0%, hsl(112,100%,40%) 100%);
+  box-shadow:
+    0 0 18px rgba(var(--neon), 0.45),
+    0 4px 16px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+  color: #000;
+  font-weight: 700;
+  border: none;
+}
+.btn-neon:hover {
+  box-shadow: 0 0 28px rgba(var(--neon),0.65), 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+  transform: translateY(-1px);
+}
+.btn-neon:active { transform: scale(0.97); }
+
+/* ─── Glow utilities ──────────────────────────────────────────────── */
+.neon-glow {
+  box-shadow: 0 0 8px rgba(var(--neon),0.5), 0 0 20px rgba(var(--neon),0.2);
+}
+.neon-text {
+  text-shadow: 0 0 8px rgba(var(--neon),0.8), 0 0 20px rgba(var(--neon),0.4);
+}
+.neon-border {
+  border-color: rgba(var(--neon), 0.35) !important;
+  box-shadow: 0 0 10px rgba(var(--neon),0.1);
+}
+
+/* ─── Scrollbar hidden ────────────────────────────────────────────── */
+.hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ─── Shimmer animation for skeletons ────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.03) 25%,
+    rgba(255,255,255,0.07) 50%,
+    rgba(255,255,255,0.03) 75%
+  );
+  background-size: 600px 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+/* ─── Card hover glow ─────────────────────────────────────────────── */
+.card-hover-glow {
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+}
+.card-hover-glow:hover {
+  box-shadow:
+    0 0 0 1px rgba(var(--neon), 0.35),
+    0 0 20px rgba(var(--neon), 0.12),
+    0 12px 40px rgba(0,0,0,0.6);
+  border-color: rgba(var(--neon), 0.35) !important;
+  transform: translateY(-2px);
+}
