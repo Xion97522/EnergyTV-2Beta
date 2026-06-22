@@ -244,8 +244,11 @@ export default function PlayerModal({ media, onClose, initialSeason = 1, initial
                 className="w-full h-full"
                 style={{ border: "none" }}
                 allowFullScreen
+                // sandbox: allow scripts + same-origin + fullscreen, but NO popups / top-nav / forms
+                // This kills the most common ad vector on free embed sources (window.open popups)
+                sandbox="allow-scripts allow-same-origin allow-fullscreen allow-presentation"
                 allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                referrerPolicy="no-referrer"
+                referrerPolicy="origin-when-cross-origin"
                 title={media.title}
                 onLoad={() => { setLoading(false); clearTimeout(timeoutRef.current); }}
               />
