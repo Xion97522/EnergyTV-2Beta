@@ -214,3 +214,43 @@
   border-color: rgba(var(--neon), 0.35) !important;
   transform: translateY(-2px);
 }
+
+/* ─── Cross-browser fallbacks ─────────────────────────────────────── */
+
+/* Firefox < 103 doesn't support backdrop-filter without a flag.
+   Provide a solid dark fallback so the UI is still legible. */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass        { background: rgba(8, 10, 16, 0.92); }
+  .glass-light  { background: rgba(8, 10, 16, 0.85); }
+  .glass-neon   { background: rgba(4, 12, 4, 0.90); }
+  .glass-modal  { background: rgba(5, 7, 11, 0.97); }
+  .glass-pill   { background: rgba(30, 32, 40, 0.95); }
+  .glass-nav-active { background: rgba(30, 60, 30, 0.95); }
+}
+
+/* Prevent horizontal overflow on narrow viewports */
+html, body {
+  overflow-x: hidden;
+}
+
+/* iOS Safari: prevent text size adjustment on rotate */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Touch action for better mobile scrolling performance */
+.hide-scrollbar {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure iframes fill properly on all browsers */
+iframe {
+  display: block;
+}
+
+/* Fix for Safari's fractional pixel rendering of transforms */
+.card-hover-glow {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
