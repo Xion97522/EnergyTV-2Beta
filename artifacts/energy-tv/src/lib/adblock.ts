@@ -317,50 +317,63 @@ function isRedirectBlocked(url: string): boolean {
 
 // ─── Location / navigation hijack blocker ────────────────────────────────
 function patchLocation(): void {
-  // Intercept location.href setter
-  const originalDescriptor = Object.getOwnPropertyDescriptor(window.Location.prototype, "href");
-  if (originalDescriptor?.set) {
-    const originalSetter = originalDescriptor.set;
-    Object.defineProperty(window.location, "href", {
-      set(url: string) {
+  // NOTE: window.location is a special platform object — its properties are
+  // non-configurable in Firefox and Safari, so Object.defineProperty on
+  // window.location throws a TypeError in those browsers. We patch the
+  // *prototype* instead (which is configurable everywhere) and wrap each
+  // method/setter with a try/catch so a failure never prevents React from
+  // mounting.
+
+  try {
+    const proto = window.Location.prototype;
+
+    // Intercept location.href setter via prototype
+    const originalDescriptor = Object.getOwnPropertyDescriptor(proto, "href");
+    if (originalDescriptor?.set) {
+      const originalSetter = originalDescriptor.set;
+      Object.defineProperty(proto, "href", {
+        ...originalDescriptor,
+        set(url: string) {
+          if (isRedirectBlocked(url)) {
+            if (import.meta.env.DEV) console.warn("[EnergyTV AdBlock] Blocked location.href redirect →", url);
+            return;
+          }
+          originalSetter.call(this, url);
+        },
+      });
+    }
+
+    // Intercept location.assign via prototype
+    const originalAssign = proto.assign;
+    Object.defineProperty(proto, "assign", {
+      value(url: string) {
         if (isRedirectBlocked(url)) {
-          if (import.meta.env.DEV) console.warn("[EnergyTV AdBlock] Blocked location.href redirect →", url);
+          if (import.meta.env.DEV) console.warn("[EnergyTV AdBlock] Blocked location.assign →", url);
           return;
         }
-        originalSetter.call(this, url);
+        originalAssign.call(this, url);
       },
-      get: originalDescriptor.get,
+      writable: true,
       configurable: true,
     });
+
+    // Intercept location.replace via prototype
+    const originalReplace = proto.replace;
+    Object.defineProperty(proto, "replace", {
+      value(url: string) {
+        if (isRedirectBlocked(url)) {
+          if (import.meta.env.DEV) console.warn("[EnergyTV AdBlock] Blocked location.replace →", url);
+          return;
+        }
+        originalReplace.call(this, url);
+      },
+      writable: true,
+      configurable: true,
+    });
+  } catch {
+    // Location prototype patching failed (extremely locked-down environment).
+    // Fall through — link-click interception still provides redirect blocking.
   }
-
-  // Intercept location.assign
-  const originalAssign = window.location.assign.bind(window.location);
-  Object.defineProperty(window.location, "assign", {
-    value(url: string) {
-      if (isRedirectBlocked(url)) {
-        if (import.meta.env.DEV) console.warn("[EnergyTV AdBlock] Blocked location.assign →", url);
-        return;
-      }
-      originalAssign(url);
-    },
-    writable: true,
-    configurable: true,
-  });
-
-  // Intercept location.replace
-  const originalReplace = window.location.replace.bind(window.location);
-  Object.defineProperty(window.location, "replace", {
-    value(url: string) {
-      if (isRedirectBlocked(url)) {
-        if (import.meta.env.DEV) console.warn("[EnergyTV AdBlock] Blocked location.replace →", url);
-        return;
-      }
-      originalReplace(url);
-    },
-    writable: true,
-    configurable: true,
-  });
 
   // Intercept history.pushState / replaceState to catch SPA-style redirects
   const originalPush = history.pushState.bind(history);
@@ -468,11 +481,13 @@ function injectCosmeticCSS(): void {
 
 // ─── Public init ──────────────────────────────────────────────────────────
 export function initAdBlock(): void {
-  patchFetch();
-  patchXHR();
-  patchWindowOpen();
-  patchLocation();
-  patchLinkClicks();
+  // Each patch is wrapped individually so a failure in one never prevents
+  // the others (or React mounting) from running.
+  try { patchFetch(); } catch { /* ignore */ }
+  try { patchXHR(); } catch { /* ignore */ }
+  try { patchWindowOpen(); } catch { /* ignore */ }
+  try { patchLocation(); } catch { /* ignore */ }
+  try { patchLinkClicks(); } catch { /* ignore */ }
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
