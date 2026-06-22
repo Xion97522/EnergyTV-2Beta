@@ -55,7 +55,6 @@ jobs:
       - name: Build energy-tv
         working-directory: artifacts/energy-tv
         env:
-          PORT: "5000"
           BASE_PATH: ${{ steps.basepath.outputs.base }}
           VITE_TMDB_API_KEY: ${{ secrets.VITE_TMDB_API_KEY }}
         run: pnpm run build
