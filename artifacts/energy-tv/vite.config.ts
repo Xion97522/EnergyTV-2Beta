@@ -2,26 +2,26 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { fileURLToPath } from "url";
 import { VitePWA } from "vite-plugin-pwa";
 
-const rawPort = process.env.PORT;
-if (!rawPort) throw new Error("PORT environment variable is required but was not provided.");
-const port = Number(rawPort);
-if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT value: "${rawPort}"`);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const basePath = process.env.BASE_PATH;
-if (!basePath) throw new Error("BASE_PATH environment variable is required but was not provided.");
+// PORT is only required in dev/preview — build doesn't need it
+const rawPort = process.env.PORT;
+const port = rawPort ? Number(rawPort) : 5000;
+
+// BASE_PATH defaults to "/" so the build works without any env var
+const basePath = process.env.BASE_PATH ?? "/";
 
 export default defineConfig({
   base: basePath,
   plugins: [
     react(),
     tailwindcss(),
-    runtimeErrorOverlay(),
     VitePWA({
       registerType: "autoUpdate",
-      devOptions: { enabled: true },
+      devOptions: { enabled: false },
       includeAssets: ["pwa-192.svg", "pwa-512.svg", "apple-touch-icon.svg", "favicon.svg"],
       manifest: {
         name: "EnergyTV",
@@ -52,7 +52,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,svg,woff2}"],
+        globPatterns: ["**/*.{js,css,html,ico,svg,woff2,ttf}"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/image\.tmdb\.org\/.*/i,
@@ -73,27 +73,15 @@ export default defineConfig({
               networkTimeoutSeconds: 8,
             },
           },
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: "StaleWhileRevalidate",
-            options: { cacheName: "google-fonts-stylesheets" },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "google-fonts-webfonts",
-              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
         ],
       },
     }),
+    // Replit plugins: only loaded when running inside Replit (REPL_ID is set)
     ...(process.env.NODE_ENV !== "production" && process.env.REPL_ID !== undefined
       ? [
+          await import("@replit/vite-plugin-runtime-error-modal").then((m) => m.default()),
           await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({ root: path.resolve(import.meta.dirname, "..") })
+            m.cartographer({ root: path.resolve(__dirname, "..") })
           ),
           await import("@replit/vite-plugin-dev-banner").then((m) => m.devBanner()),
         ]
@@ -101,19 +89,30 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "src"),
-      "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
+      "@": path.resolve(__dirname, "src"),
+      "@assets": path.resolve(__dirname, "..", "..", "attached_assets"),
     },
     dedupe: ["react", "react-dom"],
   },
-  root: path.resolve(import.meta.dirname),
+  root: path.resolve(__dirname),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    // Ensure broad browser compatibility
+    target: ["es2020", "edge88", "firefox78", "chrome87", "safari14"],
+    rollupOptions: {
+      output: {
+        // Manual chunking for better caching
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          router: ["wouter"],
+          query: ["@tanstack/react-query"],
+        },
+      },
+    },
   },
   server: {
     port,
-    strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
     fs: { strict: true },
