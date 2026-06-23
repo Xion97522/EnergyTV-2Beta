@@ -59,6 +59,7 @@ jobs:
           VITE_TMDB_API_KEY: ${{ secrets.VITE_TMDB_API_KEY }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
         run: pnpm run build
 
       - name: Add SPA 404 fallback
