@@ -40,6 +40,7 @@ export default function Detail() {
   const [showAllEpisodes, setShowAllEpisodes] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [showPlayer, setShowPlayer] = useState(false);
+  const [playerEpisode, setPlayerEpisode] = useState<{ season: number; episode: number } | null>(null);
   const [showTrailer, setShowTrailer] = useState(false);
   const [castPage, setCastPage] = useState(0);
 
@@ -145,7 +146,7 @@ export default function Detail() {
         {/* Actions */}
         <div className="flex flex-wrap gap-3">
           <button
-            onClick={() => setShowPlayer(true)}
+            onClick={() => { setPlayerEpisode(null); setShowPlayer(true); }}
             className="btn-neon flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm transition-all"
           >
             <Play className="w-4 h-4 fill-current" /> Play Now
@@ -278,7 +279,11 @@ export default function Detail() {
             ) : episodeList.length > 0 ? (
               <div className="space-y-2">
                 {visibleEpisodes.map((ep) => (
-                  <EpisodeCard key={`${ep.season}-${ep.episode}`} ep={ep} onPlay={() => setShowPlayer(true)} />
+                  <EpisodeCard
+                    key={`${ep.season}-${ep.episode}`}
+                    ep={ep}
+                    onPlay={() => { setPlayerEpisode({ season: ep.season, episode: ep.episode }); setShowPlayer(true); }}
+                  />
                 ))}
                 {episodeList.length > 5 && (
                   <button
@@ -304,7 +309,14 @@ export default function Detail() {
         )}
       </div>
 
-      {showPlayer && <PlayerModal media={media} onClose={() => setShowPlayer(false)} />}
+      {showPlayer && (
+        <PlayerModal
+          media={media}
+          onClose={() => setShowPlayer(false)}
+          initialSeason={playerEpisode?.season}
+          initialEpisode={playerEpisode?.episode}
+        />
+      )}
 
       {showTrailer && trailer && (
         <div
