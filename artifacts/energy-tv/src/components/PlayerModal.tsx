@@ -44,17 +44,21 @@ const GLASS_BTN: React.CSSProperties = {
 export default function PlayerModal({
   media,
   onClose,
-  initialSeason  = 1,
-  initialEpisode = 1,
+  initialSeason,
+  initialEpisode,
 }: PlayerModalProps) {
   const isTV       = media.type === "tv";
   const maxSeasons = media.seasons ?? 1;
 
-  const [season,  setSeason]  = useState(initialSeason);
+  // A specific episode was requested (e.g. clicked from an episode list) —
+  // skip the picker entirely and open it directly, same as the movie path.
+  const hasExplicitEpisode = isTV && initialEpisode !== undefined;
+
+  const [season,  setSeason]  = useState(initialSeason  ?? 1);
   const [step,    setStep]    = useState<"season" | "episode">("season");
 
   const { push: pushToCloud } = useCloudSync();
-  const openedMovieRef = useRef(false);
+  const openedRef = useRef(false);
 
   /** Mark progress complete + sync, for either a movie or a specific episode */
   const markWatchedAndSync = (opts?: { season?: number; episode?: number }) => {
@@ -67,17 +71,27 @@ export default function PlayerModal({
   };
 
   // Movies: no modal — open immediately in a new tab, mark watched, close.
+  // TV with an explicit episode requested: same fast path, just for that episode.
   useEffect(() => {
-    if (!isTV && !openedMovieRef.current) {
-      openedMovieRef.current = true;
+    if (openedRef.current) return;
+
+    if (!isTV) {
+      openedRef.current = true;
       window.open(SOURCE.movie(media.tmdbId), "_blank", "noopener");
       markWatchedAndSync();
       onClose();
+    } else if (hasExplicitEpisode) {
+      openedRef.current = true;
+      const s = initialSeason ?? 1;
+      const e = initialEpisode as number;
+      window.open(SOURCE.tv(media.tmdbId, s, e), "_blank", "noopener");
+      markWatchedAndSync({ season: s, episode: e });
+      onClose();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isTV]);
+  }, [isTV, hasExplicitEpisode]);
 
-  if (!isTV) return null;
+  if (!isTV || hasExplicitEpisode) return null;
 
   const handleClose = () => onClose();
 
@@ -130,7 +144,7 @@ export default function PlayerModal({
             <p className="text-sm font-bold text-foreground line-clamp-1 leading-none">{media.title}</p>
           </div>
           <button
-            onClick={() => window.open(SOURCE.tv(media.tmdbId, season, initialEpisode), "_blank", "noopener")}
+            onClick={() => window.open(SOURCE.tv(media.tmdbId, season, initialEpisode ?? 1), "_blank", "noopener")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white/60 transition-all hover:text-white/90"
             style={GLASS_BTN}
           >
