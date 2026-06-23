@@ -1,12 +1,3 @@
-/**
- * Navbar.tsx  (updated — adds Google auth UI)
- * -------------------------------------------
- * Changes from original:
- *  • Imports useAuth from AuthContext
- *  • Right side shows: user avatar + dropdown (Profile / Sign out)  OR  Sign In button
- *  • Mobile menu also gets the sign-in / user section
- */
-
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
@@ -19,7 +10,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
-  const { user, signIn, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   const navItems = [
     { href: "/",          label: "Home",      icon: Home },
@@ -31,7 +22,6 @@ export default function Navbar() {
 
   const isActive = (href: string) => location === href;
 
-  // Close avatar dropdown on outside click
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
       if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
@@ -42,7 +32,6 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleOutside);
   }, []);
 
-  // ── Shared hover helpers ──────────────────────────────────────────────────
   const navHoverIn = (e: React.MouseEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     el.style.background = "rgba(255,255,255,0.05)";
@@ -54,9 +43,10 @@ export default function Navbar() {
     el.style.backdropFilter = "";
   };
 
-  // ── Avatar / Sign-in section ──────────────────────────────────────────────
   const AuthSection = ({ mobile = false }: { mobile?: boolean }) => {
     if (user) {
+      const initial = (user.email ?? "?")[0].toUpperCase();
+
       return (
         <div className="relative" ref={mobile ? undefined : avatarRef}>
           <button
@@ -67,20 +57,23 @@ export default function Navbar() {
               border: "1px solid rgba(255,255,255,0.08)",
             }}
           >
-            <img
-              src={user.picture}
-              alt={user.name}
-              className="w-7 h-7 rounded-full object-cover"
-              style={{ border: "1.5px solid rgba(57,255,20,0.5)" }}
-            />
+            {/* Initial avatar */}
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black text-black"
+              style={{
+                background: "linear-gradient(135deg, hsl(112,100%,54%), hsl(112,100%,38%))",
+                border: "1.5px solid rgba(57,255,20,0.5)",
+              }}
+            >
+              {initial}
+            </div>
             {mobile && (
-              <span className="text-sm font-medium text-white">
-                {user.given_name}
+              <span className="text-sm font-medium text-white truncate max-w-[140px]">
+                {user.email}
               </span>
             )}
           </button>
 
-          {/* Dropdown */}
           {avatarMenuOpen && (
             <div
               className="absolute right-0 mt-2 w-52 rounded-2xl overflow-hidden z-50"
@@ -91,13 +84,10 @@ export default function Navbar() {
                 backdropFilter: "blur(24px)",
               }}
             >
-              {/* User info header */}
               <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-                <p className="text-sm font-semibold text-white truncate">{user.name}</p>
                 <p className="text-xs text-muted-foreground truncate">{user.email}</p>
               </div>
 
-              {/* Menu items */}
               <div className="py-1.5">
                 <Link href="/settings">
                   <button
@@ -127,7 +117,6 @@ export default function Navbar() {
       );
     }
 
-    // Not signed in
     return (
       <Link href="/signin">
         <button
@@ -147,7 +136,6 @@ export default function Navbar() {
     );
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
       <nav
@@ -173,12 +161,12 @@ export default function Navbar() {
               <Zap className="w-4 h-4 text-black fill-black" />
             </div>
             <span className="text-foreground font-black text-lg tracking-tight">
-              Energy<span className="neon-text" style={{ color: "hsl(112,100%,54%)" }}>TV</span>
+              Energy<span style={{ color: "hsl(112,100%,54%)" }}>TV</span>
             </span>
           </div>
         </Link>
 
-        {/* Desktop nav links */}
+        {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-1">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href}>
@@ -198,7 +186,6 @@ export default function Navbar() {
 
         {/* Right controls */}
         <div className="flex items-center gap-2">
-          {/* Settings (desktop, only when signed in) */}
           {user && (
             <Link href="/settings">
               <button
@@ -212,12 +199,10 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Auth section — desktop */}
           <div className="hidden md:flex">
             <AuthSection />
           </div>
 
-          {/* Hamburger — mobile */}
           <button
             className="md:hidden p-2 rounded-xl text-muted-foreground"
             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)" }}
@@ -267,7 +252,6 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Auth in mobile menu */}
             <div
               className="mt-2 px-4 py-3 rounded-2xl"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(57,255,20,0.1)" }}
