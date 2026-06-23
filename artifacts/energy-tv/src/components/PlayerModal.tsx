@@ -1,27 +1,23 @@
 /**
- * PlayerModal.tsx  (updated — tracks real watch progress)
+ * PlayerModal.tsx  (slimmed — picker + "open in new tab" only)
  * ────────────────────────────────────────────────────────────────────────────
- * Changes from original:
- *  + Imports saveProgress from watchlist
- *  + Tracks elapsed time with setInterval (simulated, since embed iframes
- *    can't report currentTime cross-origin)
- *  + On unmount / close saves the progress entry and fires energytv:changed
- *    so the cloud sync hook picks it up
- *
- * Progress simulation:
- *   We can't read playback position from the third-party iframe.
- *   So we start a timer when the player loads and increment progress by
- *   ~1% per estimated minute of content (defaulting to 90-min movies /
- *   42-min episodes).  This gives a reasonable "how far did I get" bar.
+ * Changes from the iframe-player version:
+ *  - Removed the embedded iframe player entirely (no more sandboxed embed,
+ *    source switcher, load/timeout handling, or simulated progress timer).
+ *  - Movies: no modal at all. Calling the component for a movie immediately
+ *    opens the source URL in a new tab, marks progress complete, and closes.
+ *  - TV: modal still shows Season → Episode picker. Picking an episode opens
+ *    that episode's URL in a new tab, marks progress complete for that
+ *    episode, then closes the modal.
+ *  - Progress: since we can no longer observe real playback (no iframe to
+ *    time), we mark the opened item as 100% watched at the moment the tab
+ *    is opened, and still push to cloud sync via the energytv:changed event.
  */
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import {
-  X, Play, ChevronLeft, ExternalLink, Tv, Layers,
-  AlertTriangle, RefreshCw, Loader2, Cloud,
-} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { X, ChevronLeft, ExternalLink, Tv, Play } from "lucide-react";
 import { Media } from "@/data/movies";
-import { saveProgress, getProgress } from "@/data/watchlist";
+import { saveProgress } from "@/data/watchlist";
 import { useCloudSync } from "@/hooks/useCloudSync";
 
 interface PlayerModalProps {
@@ -31,46 +27,11 @@ interface PlayerModalProps {
   initialEpisode?: number;
 }
 
-/* ── Embed sources ─────────────────────────────────────────────────── */
-const SOURCES = [
-  {
-    id:    "vidsrc",
-    label: "VidSrc",
-    movie: (id: number) => `https://vidsrc.to/embed/movie/${id}`,
-    tv:    (id: number, s: number, e: number) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`,
-  },
-  {
-    id:    "vidlink",
-    label: "VidLink",
-    movie: (id: number) => `https://vidlink.pro/movie/${id}`,
-    tv:    (id: number, s: number, e: number) => `https://vidlink.pro/tv/${id}/${s}/${e}`,
-  },
-  {
-    id:    "embedsu",
-    label: "Embed.su",
-    movie: (id: number) => `https://embed.su/embed/movie/${id}`,
-    tv:    (id: number, s: number, e: number) => `https://embed.su/embed/tv/${id}/${s}/${e}`,
-  },
-  {
-    id:    "autoembed",
-    label: "AutoEmbed",
-    movie: (id: number) => `https://autoembed.co/movie/tmdb/${id}`,
-    tv:    (id: number, s: number, e: number) => `https://autoembed.co/tv/tmdb/${id}-${s}-${e}`,
-  },
-  {
-    id:    "2embed",
-    label: "2Embed",
-    movie: (id: number) => `https://www.2embed.cc/embed/${id}`,
-    tv:    (id: number, s: number, e: number) => `https://www.2embed.cc/embedtv/${id}&s=${s}&e=${e}`,
-  },
-  {
-    id:    "multiembed",
-    label: "MultiEmbed",
-    movie: (id: number) => `https://multiembed.mov/?video_id=${id}&tmdb=1`,
-    tv:    (id: number, s: number, e: number) =>
-      `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}`,
-  },
-] as const;
+/* ── Single source used to build the "open in new tab" URL ────────────── */
+const SOURCE = {
+  movie: (id: number) => `https://vidsrc.to/embed/movie/${id}`,
+  tv:    (id: number, s: number, e: number) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`,
+};
 
 const GLASS_BTN: React.CSSProperties = {
   background:          "rgba(255,255,255,0.055)",
@@ -79,12 +40,6 @@ const GLASS_BTN: React.CSSProperties = {
   border:              "1px solid rgba(255,255,255,0.09)",
   boxShadow:           "inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.3)",
 };
-
-/** Estimated duration in minutes for progress simulation */
-function estimatedMinutes(media: Media): number {
-  if (media.runtime) return media.runtime;
-  return media.type === "tv" ? 42 : 90;
-}
 
 export default function PlayerModal({
   media,
@@ -95,97 +50,43 @@ export default function PlayerModal({
   const isTV       = media.type === "tv";
   const maxSeasons = media.seasons ?? 1;
 
-  const [sourceIdx, setSourceIdx] = useState(0);
-  const [season,    setSeason]    = useState(initialSeason);
-  const [episode,   setEpisode]   = useState(initialEpisode);
-  const [step,      setStep]      = useState<"season" | "episode" | "player">(
-    isTV ? "season" : "player"
-  );
-  const [loading,   setLoading]   = useState(true);
-  const [timedOut,  setTimedOut]  = useState(false);
-
-  // Progress tracking
-  const progressRef    = useRef<number>(0);
-  const playTimerRef   = useRef<ReturnType<typeof setInterval>>();
-  const iframeKey      = useRef(0);
-  const timeoutRef     = useRef<ReturnType<typeof setTimeout>>();
+  const [season,  setSeason]  = useState(initialSeason);
+  const [step,    setStep]    = useState<"season" | "episode">("season");
 
   const { push: pushToCloud } = useCloudSync();
+  const openedMovieRef = useRef(false);
 
-  // Restore previous progress on open
-  useEffect(() => {
-    const prev = getProgress(media.id);
-    if (prev) progressRef.current = prev.percent;
-  }, [media.id]);
-
-  // Start/stop the progress simulation timer
-  const startProgressTimer = useCallback(() => {
-    clearInterval(playTimerRef.current);
-    const durMins    = estimatedMinutes(media);
-    // 1% per (duration / 100) minutes → completes in roughly one duration
-    const tickMs     = (durMins * 60 * 1000) / 100;
-    playTimerRef.current = setInterval(() => {
-      progressRef.current = Math.min(99, progressRef.current + 1);
-    }, tickMs);
-  }, [media]);
-
-  const stopProgressTimer = useCallback(() => {
-    clearInterval(playTimerRef.current);
-  }, []);
-
-  // Save progress + push to cloud on close
-  const handleClose = useCallback(() => {
-    stopProgressTimer();
-    if (progressRef.current > 0) {
-      saveProgress(media.id, progressRef.current, {
-        season:  isTV ? season  : undefined,
-        episode: isTV ? episode : undefined,
-      });
-      window.dispatchEvent(new Event("energytv:changed"));
-      pushToCloud();
-    }
-    onClose();
-  }, [stopProgressTimer, media.id, isTV, season, episode, pushToCloud, onClose]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopProgressTimer();
-      clearTimeout(timeoutRef.current);
-    };
-  }, [stopProgressTimer]);
-
-  const source   = SOURCES[sourceIdx];
-  const embedUrl = isTV
-    ? source.tv(media.tmdbId, season, episode)
-    : source.movie(media.tmdbId);
-
-  const resetPlayer = useCallback(() => {
-    setLoading(true);
-    setTimedOut(false);
-    iframeKey.current += 1;
-    stopProgressTimer();
-    clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setTimedOut(true), 12000);
-  }, [stopProgressTimer]);
-
-  useEffect(() => {
-    if (step === "player") resetPlayer();
-    return () => clearTimeout(timeoutRef.current);
-  }, [step, sourceIdx, season, episode, resetPlayer]);
-
-  const handleIframeLoad = useCallback(() => {
-    setLoading(false);
-    clearTimeout(timeoutRef.current);
-    startProgressTimer();
-  }, [startProgressTimer]);
-
-  const nextSource = () => {
-    const next = (sourceIdx + 1) % SOURCES.length;
-    setSourceIdx(next);
+  /** Mark progress complete + sync, for either a movie or a specific episode */
+  const markWatchedAndSync = (opts?: { season?: number; episode?: number }) => {
+    saveProgress(media.id, 100, {
+      season:  isTV ? opts?.season  : undefined,
+      episode: isTV ? opts?.episode : undefined,
+    });
+    window.dispatchEvent(new Event("energytv:changed"));
+    pushToCloud();
   };
 
-  const openExternal = () => window.open(embedUrl, "_blank", "noopener");
+  // Movies: no modal — open immediately in a new tab, mark watched, close.
+  useEffect(() => {
+    if (!isTV && !openedMovieRef.current) {
+      openedMovieRef.current = true;
+      window.open(SOURCE.movie(media.tmdbId), "_blank", "noopener");
+      markWatchedAndSync();
+      onClose();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTV]);
+
+  if (!isTV) return null;
+
+  const handleClose = () => onClose();
+
+  const openEpisode = (ep: number) => {
+    const url = SOURCE.tv(media.tmdbId, season, ep);
+    window.open(url, "_blank", "noopener");
+    markWatchedAndSync({ season, episode: ep });
+    onClose();
+  };
 
   const allSeasons = Array.from({ length: maxSeasons }, (_, i) => i + 1);
   const localEps   = (media.episodes ?? []).filter((e) => e.season === season);
@@ -226,31 +127,15 @@ export default function PlayerModal({
             <button onClick={handleClose} className="p-1.5 rounded-xl transition-all hover:scale-105" style={GLASS_BTN}>
               <X className="w-4 h-4 text-white/70" />
             </button>
-            <div>
-              <p className="text-sm font-bold text-foreground line-clamp-1 leading-none">{media.title}</p>
-              {isTV && step === "player" && (
-                <p className="text-xs text-muted-foreground mt-0.5">Season {season} · Episode {episode}</p>
-              )}
-            </div>
+            <p className="text-sm font-bold text-foreground line-clamp-1 leading-none">{media.title}</p>
           </div>
-          <div className="flex items-center gap-2">
-            {isTV && step === "player" && (
-              <button
-                onClick={() => setStep("episode")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white/60 transition-all"
-                style={GLASS_BTN}
-              >
-                <Tv className="w-3.5 h-3.5" /> Episodes
-              </button>
-            )}
-            <button
-              onClick={openExternal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white/60 transition-all hover:text-white/90"
-              style={GLASS_BTN}
-            >
-              <ExternalLink className="w-3.5 h-3.5" /> Open Tab
-            </button>
-          </div>
+          <button
+            onClick={() => window.open(SOURCE.tv(media.tmdbId, season, initialEpisode), "_blank", "noopener")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white/60 transition-all hover:text-white/90"
+            style={GLASS_BTN}
+          >
+            <ExternalLink className="w-3.5 h-3.5" /> Open Tab
+          </button>
         </div>
 
         {/* ── Season picker ─────────────────────────────────── */}
@@ -290,20 +175,17 @@ export default function PlayerModal({
               ).map((ep) => (
                 <button
                   key={ep.num}
-                  onClick={() => { setEpisode(ep.num); setStep("player"); }}
+                  onClick={() => openEpisode(ep.num)}
                   className="w-full flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all group/ep"
                   style={{
                     ...GLASS_BTN,
-                    background:   episode === ep.num ? "rgba(57,255,20,0.08)"  : "rgba(255,255,255,0.03)",
-                    borderColor:  episode === ep.num ? "rgba(57,255,20,0.2)"   : "rgba(255,255,255,0.06)",
+                    background:  "rgba(255,255,255,0.03)",
+                    borderColor: "rgba(255,255,255,0.06)",
                   }}
                 >
                   <div
                     className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black"
-                    style={{
-                      background: episode === ep.num ? "rgba(57,255,20,0.2)" : "rgba(255,255,255,0.06)",
-                      color:      episode === ep.num ? "hsl(112,100%,54%)"   : "rgba(255,255,255,0.45)",
-                    }}
+                    style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)" }}
                   >{ep.num}</div>
                   <p className="flex-1 text-xs font-semibold text-foreground/80 line-clamp-1">{ep.title}</p>
                   {ep.dur && <span className="text-[10px] text-muted-foreground/40 shrink-0">{ep.dur}</span>}
@@ -311,110 +193,11 @@ export default function PlayerModal({
                 </button>
               ))}
             </div>
+            <div className="flex items-center gap-2 mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.055)" }}>
+              <Tv className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+              <span className="text-xs text-muted-foreground/40">Pick an episode to open it in a new tab</span>
+            </div>
           </div>
-        )}
-
-        {/* ── Player ───────────────────────────────────────── */}
-        {step === "player" && (
-          <>
-            <div className="relative" style={{ aspectRatio: "16/9", background: "#000" }}>
-              {/* Loading overlay */}
-              {loading && !timedOut && (
-                <div
-                  className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10"
-                  style={{ background: "rgba(4,5,9,0.92)" }}
-                >
-                  <div className="relative w-12 h-12">
-                    <Loader2 className="w-12 h-12 animate-spin" style={{ color: "hsl(112,100%,54%)" }} />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Play className="w-5 h-5 fill-current" style={{ color: "hsl(112,100%,54%)" }} />
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground/60">
-                    Loading <span className="font-semibold text-foreground/60">{source.label}</span>…
-                  </p>
-                </div>
-              )}
-
-              {/* Timed-out / blocked banner */}
-              {timedOut && loading && (
-                <div
-                  className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10 p-6"
-                  style={{ background: "rgba(4,5,9,0.95)" }}
-                >
-                  <AlertTriangle className="w-10 h-10" style={{ color: "hsl(112,100%,54%)" }} />
-                  <div className="text-center">
-                    <p className="text-sm font-bold text-foreground/80">{source.label} might be blocked</p>
-                    <p className="text-xs text-muted-foreground/50 mt-1">Try a different source or open in a new tab</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={nextSource}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-black transition-all hover:scale-105"
-                      style={{ background: "linear-gradient(135deg,hsl(112,100%,54%),hsl(112,100%,40%))", boxShadow: "0 0 16px rgba(57,255,20,0.4)" }}
-                    >
-                      <RefreshCw className="w-4 h-4" /> Try Next Source
-                    </button>
-                    <button
-                      onClick={openExternal}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white/70 transition-all"
-                      style={GLASS_BTN}
-                    >
-                      <ExternalLink className="w-4 h-4" /> Open in Tab
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground/30">
-                    Source {sourceIdx + 1} of {SOURCES.length} · {source.label}
-                  </p>
-                </div>
-              )}
-
-              <iframe
-                key={iframeKey.current}
-                src={embedUrl}
-                className="w-full h-full"
-                style={{ border: "none" }}
-                allowFullScreen
-                sandbox="allow-scripts allow-same-origin allow-fullscreen allow-presentation allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation-by-user-activation"
-                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                referrerPolicy="origin-when-cross-origin"
-                title={media.title}
-                onLoad={handleIframeLoad}
-              />
-            </div>
-
-            {/* Source switcher bar */}
-            <div
-              className="flex items-center gap-2 px-4 py-3 flex-wrap"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.055)" }}
-            >
-              <Layers className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
-              <span className="text-xs text-muted-foreground/40 mr-auto">Source</span>
-              <div className="flex flex-wrap gap-1.5">
-                {SOURCES.map((s, i) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setSourceIdx(i)}
-                    className="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all"
-                    style={
-                      i === sourceIdx
-                        ? { background: "linear-gradient(135deg,hsl(112,100%,54%),hsl(112,100%,38%))", color: "#000", boxShadow: "0 0 10px rgba(57,255,20,0.35)", border: "none" }
-                        : { ...GLASS_BTN, color: "rgba(255,255,255,0.45)" }
-                    }
-                  >{s.label}</button>
-                ))}
-              </div>
-              {isTV && (
-                <button
-                  onClick={() => setStep("episode")}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white/45 ml-1"
-                  style={GLASS_BTN}
-                >
-                  <Tv className="w-3 h-3" /> Eps
-                </button>
-              )}
-            </div>
-          </>
         )}
       </div>
     </div>
