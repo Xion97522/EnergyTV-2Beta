@@ -375,7 +375,7 @@ export default function PlayerModal({
                 className="w-full h-full"
                 style={{ border: "none" }}
                 allowFullScreen
-                sandbox="allow-scripts allow-same-origin allow-fullscreen allow-presentation"
+                sandbox="allow-scripts allow-same-origin allow-fullscreen allow-presentation allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation-by-user-activation"
                 allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                 referrerPolicy="origin-when-cross-origin"
                 title={media.title}
