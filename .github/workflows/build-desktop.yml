@@ -76,21 +76,17 @@ jobs:
         with:
           node-version: 20
 
-      # Download the pre-built Vite output
       - name: Download web dist
         uses: actions/download-artifact@v4
         with:
           name: web-dist
           path: electron/renderer
 
-      # Bootstrap a minimal Electron project next to the repo files.
-      # electron-builder reads package.json from the working directory,
-      # so we keep everything self-contained under ./electron/.
       - name: Create Electron package.json
         shell: bash
         run: |
           mkdir -p electron
-          cat > electron/package.json <<'EOF'
+          cat > electron/package.json << 'EOF'
           {
             "name": "energy-tv-desktop",
             "version": "1.0.0",
@@ -98,6 +94,10 @@ jobs:
             "main": "main.js",
             "author": "CrAzE / NELABEL",
             "license": "MIT",
+            "repository": {
+              "type": "git",
+              "url": "https://github.com/Xion97522/EnergyTV-2Beta"
+            },
             "scripts": {
               "dist": "electron-builder"
             },
@@ -134,7 +134,7 @@ jobs:
       - name: Create Electron main.js
         shell: bash
         run: |
-          cat > electron/main.js <<'EOF'
+          cat > electron/main.js << 'EOF'
           const { app, BrowserWindow, session } = require('electron');
           const path = require('path');
 
@@ -152,7 +152,6 @@ jobs:
               },
             });
 
-            // Allow mixed-content so embedded players (HTTP iframes) load
             session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
               callback({
                 responseHeaders: {
@@ -182,7 +181,7 @@ jobs:
       - name: Create preload.js
         shell: bash
         run: |
-          cat > electron/preload.js <<'EOF'
+          cat > electron/preload.js << 'EOF'
           // Intentionally minimal – add IPC bridges here if needed
           EOF
 
@@ -192,10 +191,8 @@ jobs:
 
       - name: Build Electron app
         working-directory: electron
-        run: npm run dist -- --${{ matrix.electron-target }}
+        run: npx electron-builder --${{ matrix.electron-target }} --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS notarisation (optional – leave secrets empty to skip)
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -210,7 +207,6 @@ jobs:
             electron/dist-electron/**/*.dmg
             electron/dist-electron/**/*.zip
             electron/dist-electron/**/*.exe
-            electron/dist-electron/**/*.portable.exe
           if-no-files-found: warn
 
   # ─────────────────────────────────────────────────────────
@@ -242,19 +238,15 @@ jobs:
           name: web-dist
           path: capacitor-app/www
 
-      # Bootstrap a minimal Capacitor project
       - name: Create Capacitor package.json
         run: |
           mkdir -p capacitor-app
-          cat > capacitor-app/package.json <<'EOF'
+          cat > capacitor-app/package.json << 'EOF'
           {
             "name": "energy-tv-android",
             "version": "1.0.0",
             "description": "EnergyTV Android",
             "license": "MIT",
-            "scripts": {
-              "cap": "cap"
-            },
             "dependencies": {
               "@capacitor/android": "^6.0.0",
               "@capacitor/cli": "^6.0.0",
@@ -265,7 +257,7 @@ jobs:
 
       - name: Create capacitor.config.json
         run: |
-          cat > capacitor-app/capacitor.config.json <<'EOF'
+          cat > capacitor-app/capacitor.config.json << 'EOF'
           {
             "appId": "com.craze.energytv",
             "appName": "EnergyTV",
@@ -325,7 +317,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
-      - name: Download all artifacts
+      - name: Download Electron artifacts
         uses: actions/download-artifact@v4
         with:
           path: release-assets
