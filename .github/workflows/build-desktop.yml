@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   # ─────────────────────────────────────────────────────────
-  # 1. Build the Vite PWA (shared artifact used by all jobs)
+  # 1. Build the Vite PWA
   # ─────────────────────────────────────────────────────────
   build-web:
     name: Build Vite app
@@ -48,7 +48,7 @@ jobs:
           retention-days: 1
 
   # ─────────────────────────────────────────────────────────
-  # 2. Electron desktop builds (Linux · macOS · Windows)
+  # 2. Electron builds
   # ─────────────────────────────────────────────────────────
   build-electron:
     name: Electron – ${{ matrix.os-label }}
@@ -93,8 +93,8 @@ jobs:
             "description": "EnergyTV Desktop",
             "main": "main.js",
             "author": {
-            "name": "CrAzE / NELABEL",
-            "email": "craze@nelabel.com"
+              "name": "CrAzE / NELABEL",
+              "email": "craze@nelabel.com"
             },
             "license": "MIT",
             "repository": {
@@ -116,15 +116,15 @@ jobs:
                 "renderer/**/*"
               ],
               "linux": {
-                "target": ["deb", "AppImage"],
+                "target": ["deb"],
                 "category": "AudioVideo"
               },
               "mac": {
-                "target": ["dmg", "zip"],
+                "target": ["dmg"],
                 "category": "public.app-category.entertainment"
               },
               "win": {
-                "target": ["nsis", "portable"]
+                "target": ["nsis"]
               }
             },
             "devDependencies": {
@@ -185,7 +185,7 @@ jobs:
         shell: bash
         run: |
           cat > electron/preload.js << 'EOF'
-          // Intentionally minimal – add IPC bridges here if needed
+          // IPC bridge placeholder
           EOF
 
       - name: Install Electron deps
@@ -195,10 +195,6 @@ jobs:
       - name: Build Electron app
         working-directory: electron
         run: npx electron-builder --${{ matrix.electron-target }} --publish never
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Upload Electron artifacts
         uses: actions/upload-artifact@v4
@@ -206,14 +202,12 @@ jobs:
           name: electron-${{ matrix.os-label }}
           path: |
             electron/dist-electron/**/*.deb
-            electron/dist-electron/**/*.AppImage
             electron/dist-electron/**/*.dmg
-            electron/dist-electron/**/*.zip
             electron/dist-electron/**/*.exe
           if-no-files-found: warn
 
   # ─────────────────────────────────────────────────────────
-  # 3. Android APK via Capacitor
+  # 3. Android APK
   # ─────────────────────────────────────────────────────────
   build-apk:
     name: Android APK
@@ -241,15 +235,13 @@ jobs:
           name: web-dist
           path: capacitor-app/www
 
-      - name: Create Capacitor package.json
+      - name: Create Capacitor project
         run: |
           mkdir -p capacitor-app
           cat > capacitor-app/package.json << 'EOF'
           {
             "name": "energy-tv-android",
             "version": "1.0.0",
-            "description": "EnergyTV Android",
-            "license": "MIT",
             "dependencies": {
               "@capacitor/android": "^6.0.0",
               "@capacitor/cli": "^6.0.0",
@@ -258,28 +250,11 @@ jobs:
           }
           EOF
 
-      - name: Create capacitor.config.json
-        run: |
           cat > capacitor-app/capacitor.config.json << 'EOF'
           {
             "appId": "com.craze.energytv",
             "appName": "EnergyTV",
-            "webDir": "www",
-            "server": {
-              "androidScheme": "https",
-              "allowNavigation": [
-                "*.themoviedb.org",
-                "*.supabase.co",
-                "*.vidsrc.xyz",
-                "*.vidsrc.to",
-                "*.embedder.net"
-              ]
-            },
-            "android": {
-              "allowMixedContent": true,
-              "captureInput": true,
-              "webContentsDebuggingEnabled": false
-            }
+            "webDir": "www"
           }
           EOF
 
@@ -287,31 +262,26 @@ jobs:
         working-directory: capacitor-app
         run: npm install
 
-      - name: Add Android platform
+      - name: Setup Android
         working-directory: capacitor-app
-        run: npx cap add android
+        run: |
+          npx cap add android
+          npx cap sync android
 
-      - name: Sync web assets
-        working-directory: capacitor-app
-        run: npx cap sync android
-
-      - name: Make gradlew executable
+      - name: Build APK
         working-directory: capacitor-app/android
-        run: chmod +x gradlew
-
-      - name: Build debug APK
-        working-directory: capacitor-app/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: capacitor-app/android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
 
   # ─────────────────────────────────────────────────────────
-  # 4. Attach all artifacts to a GitHub Release (tag builds)
+  # 4. Release
   # ─────────────────────────────────────────────────────────
   release:
     name: Publish Release
