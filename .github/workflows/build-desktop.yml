@@ -94,7 +94,7 @@ jobs:
             "main": "main.js",
             "author": {
             "name": "CrAzE / NELABEL",
-            "email": "craze@nelabel"
+            "email": "craze@nelabel.com"
             },
             "license": "MIT",
             "repository": {
