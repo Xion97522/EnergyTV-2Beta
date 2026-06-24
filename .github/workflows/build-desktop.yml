@@ -92,7 +92,10 @@ jobs:
             "version": "1.0.0",
             "description": "EnergyTV Desktop",
             "main": "main.js",
-            "author": "CrAzE / NELABEL",
+            "author": {
+            "name": "CrAzE / NELABEL",
+            "email": "craze@nelabel"
+            },
             "license": "MIT",
             "repository": {
               "type": "git",
