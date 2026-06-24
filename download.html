@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Download — EnergyTV</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #09090b;
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #e4e4e7;
+    min-height: 100vh;
+  }
+
+  .page { padding-bottom: 4rem; }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 4rem 2rem 3rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 3rem;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+    text-decoration: none;
+  }
+
+  .logo-bolt {
+    width: 36px; height: 36px;
+    background: #39FF14;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .logo-bolt svg { width: 20px; height: 20px; fill: #09090b; }
+
+  .logo-name {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #fafafa;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #39FF14;
+    background: rgba(57,255,20,0.08);
+    border: 1px solid rgba(57,255,20,0.18);
+    padding: 4px 12px;
+    border-radius: 100px;
+    margin-bottom: 1.25rem;
+  }
+
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    color: #fafafa;
+    line-height: 1.15;
+    margin-bottom: 0.75rem;
+  }
+
+  .hero p {
+    font-size: 15px;
+    color: #71717a;
+    max-width: 400px;
+    margin: 0 auto;
+    line-height: 1.65;
+  }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #52525b;
+    text-align: center;
+    margin-bottom: 1.25rem;
+  }
+
+  /* ── Desktop cards ── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  .card {
+    background: #111113;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 1.25rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .card:hover {
+    border-color: rgba(57,255,20,0.3);
+    background: #141416;
+  }
+
+  .card-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .card-icon svg { width: 20px; height: 20px; fill: #a1a1aa; }
+
+  .card-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #e4e4e7;
+  }
+
+  .card-formats {
+    font-size: 12px;
+    color: #52525b;
+    line-height: 1.5;
+  }
+
+  .card-arrow {
+    margin-top: auto;
+    font-size: 16px;
+    color: #39FF14;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .card:hover .card-arrow { opacity: 1; }
+
+  /* ── All releases link ── */
+  .all-releases {
+    display: block;
+    text-align: center;
+    margin: 1.5rem auto 0;
+    font-size: 13px;
+    color: #3f3f46;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .all-releases:hover { color: #71717a; }
+
+  /* ── Divider ── */
+  hr {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    max-width: 780px;
+    margin: 2.5rem auto;
+  }
+
+  /* ── APK card ── */
+  .apk-wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  .apk-card {
+    background: #111113;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 1.125rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .apk-card:hover {
+    border-color: rgba(57,255,20,0.3);
+    background: #141416;
+  }
+
+  .apk-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .apk-icon svg { width: 24px; height: 24px; fill: #a1a1aa; }
+
+  .apk-info { flex: 1; }
+  .apk-name { font-size: 14px; font-weight: 500; color: #e4e4e7; }
+  .apk-sub { font-size: 12px; color: #52525b; margin-top: 2px; }
+
+  .apk-arrow {
+    font-size: 18px;
+    color: #39FF14;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .apk-card:hover .apk-arrow { opacity: 1; }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    margin-top: 3.5rem;
+    font-size: 12px;
+    color: #3f3f46;
+  }
+
+  .footer a { color: #52525b; text-decoration: none; }
+  .footer a:hover { color: #71717a; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hero">
+    <a class="logo" href="https://github.com/Xion97522/EnergyTV-2Beta" target="_blank" rel="noopener">
+      <div class="logo-bolt">
+        <svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11L10 22L19.5 10H13L13 2Z"/></svg>
+      </div>
+      <span class="logo-name">EnergyTV</span>
+    </a>
+    <div class="badge">Now available</div>
+    <h1>Download the app</h1>
+    <p>Stream movies and TV shows on every platform. All builds are free.</p>
+  </div>
+
+  <p class="section-label">Desktop</p>
+
+  <div class="cards">
+
+    <a class="card" href="https://github.com/Xion97522/EnergyTV-2Beta/releases/latest" target="_blank" rel="noopener">
+      <div class="card-icon">
+        <!-- Linux -->
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      </div>
+      <div class="card-name">Linux</div>
+      <div class="card-formats">.deb · AppImage</div>
+      <div class="card-arrow">↗</div>
+    </a>
+
+    <a class="card" href="https://github.com/Xion97522/EnergyTV-2Beta/releases/latest" target="_blank" rel="noopener">
+      <div class="card-icon">
+        <!-- Apple -->
+        <svg viewBox="0 0 24 24"><path d="M18.71 19.5C17.88 20.74 17 21.95 15.66 21.97C14.32 22 13.89 21.18 12.37 21.18C10.84 21.18 10.37 21.95 9.1 22C7.78 22.05 6.8 20.68 5.96 19.47C4.25 17 2.94 12.45 4.7 9.39C5.57 7.87 7.13 6.91 8.82 6.88C10.1 6.86 11.32 7.75 12.11 7.75C12.89 7.75 14.37 6.68 15.92 6.84C16.57 6.87 18.39 7.1 19.56 8.82C19.47 8.88 17.39 10.1 17.41 12.63C17.44 15.65 20.06 16.66 20.09 16.67C20.06 16.74 19.67 18.11 18.71 19.5ZM13 3.5C13.73 2.67 14.94 2.04 15.94 2C16.07 3.17 15.6 4.35 14.9 5.19C14.21 6.04 13.07 6.7 11.95 6.61C11.8 5.46 12.36 4.26 13 3.5Z"/></svg>
+      </div>
+      <div class="card-name">macOS</div>
+      <div class="card-formats">.dmg · .zip</div>
+      <div class="card-arrow">↗</div>
+    </a>
+
+    <a class="card" href="https://github.com/Xion97522/EnergyTV-2Beta/releases/latest" target="_blank" rel="noopener">
+      <div class="card-icon">
+        <!-- Windows -->
+        <svg viewBox="0 0 24 24"><path d="M3 5.75V11H11V4H4.75C3.785 4 3 4.785 3 5.75ZM3 18.25C3 19.215 3.785 20 4.75 20H11V13H3V18.25ZM13 20H19.25C20.215 20 21 19.215 21 18.25V13H13V20ZM21 11V5.75C21 4.785 20.215 4 19.25 4H13V11H21Z"/></svg>
+      </div>
+      <div class="card-name">Windows</div>
+      <div class="card-formats">.exe installer · portable</div>
+      <div class="card-arrow">↗</div>
+    </a>
+
+  </div>
+
+  <a class="all-releases" href="https://github.com/Xion97522/EnergyTV-2Beta/releases" target="_blank" rel="noopener">
+    Browse all releases on GitHub →
+  </a>
+
+  <hr>
+
+  <p class="section-label">Mobile</p>
+
+  <div class="apk-wrap">
+    <a class="apk-card" href="https://github.com/Xion97522/EnergyTV-2Beta/releases/latest" target="_blank" rel="noopener">
+      <div class="apk-icon">
+        <!-- Android -->
+        <svg viewBox="0 0 24 24"><path d="M17.6 9.48L19.44 6.3C19.56 6.09 19.5 5.82 19.29 5.7C19.08 5.58 18.81 5.64 18.69 5.85L16.83 9.06C15.43 8.4 13.86 8.04 12 8.04C10.14 8.04 8.57 8.4 7.17 9.06L5.31 5.85C5.19 5.64 4.92 5.57 4.71 5.7C4.5 5.82 4.44 6.09 4.56 6.3L6.4 9.48C3.58 11.04 1.66 13.98 1.64 17.4H22.36C22.34 13.98 20.42 11.04 17.6 9.48ZM7.8 15C7.24 15 6.78 14.54 6.78 13.98C6.78 13.42 7.24 12.96 7.8 12.96C8.36 12.96 8.82 13.42 8.82 13.98C8.82 14.54 8.36 15 7.8 15ZM16.2 15C15.64 15 15.18 14.54 15.18 13.98C15.18 13.42 15.64 12.96 16.2 12.96C16.76 12.96 17.22 13.42 17.22 13.98C17.22 14.54 16.76 15 16.2 15Z"/></svg>
+      </div>
+      <div class="apk-info">
+        <div class="apk-name">Android APK</div>
+        <div class="apk-sub">Sideload — Android 7.0+</div>
+      </div>
+      <div class="apk-arrow">↗</div>
+    </a>
+  </div>
+
+  <div class="footer">
+    Built by <a href="https://github.com/Xion97522" target="_blank" rel="noopener">CrAzE / NELABEL</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/Xion97522/EnergyTV-2Beta" target="_blank" rel="noopener">Source on GitHub</a>
+  </div>
+
+</div>
+</body>
+</html>
