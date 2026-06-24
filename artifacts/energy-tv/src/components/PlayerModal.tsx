@@ -29,8 +29,8 @@ interface PlayerModalProps {
 
 /* ── Single source used to build the "open in new tab" URL ────────────── */
 const SOURCE = {
-  movie: (id: number) => `https://vidsrc.to/embed/movie/${id}`,
-  tv:    (id: number, s: number, e: number) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`,
+  movie: (id: number) => `https://vidlink.pro/embed/movie/${id}`,
+  tv:    (id: number, s: number, e: number) => `https://vidlink.pro/embed/tv/${id}/${s}/${e}`,
 };
 
 const GLASS_BTN: React.CSSProperties = {
