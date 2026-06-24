@@ -16,17 +16,7 @@
 // ─── Embed source allowlist ───────────────────────────────────────────────
 // These domains are the actual players. Never block anything from them.
 const PLAYER_DOMAINS: ReadonlySet<string> = new Set([
-  "vidsrc.to",
-  "vidsrc.me",
-  "vidsrc.xyz",
-  "vidsrc.net",
-  "vidsrc.in",
   "vidlink.pro",
-  "embed.su",
-  "autoembed.co",
-  "2embed.cc",
-  "multiembed.mov",
-  "multiembed.me",
   // CDN / delivery domains the above players pull from
   "cdn.jwplayer.com",
   "cdn.plyr.io",
