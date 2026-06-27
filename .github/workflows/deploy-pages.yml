@@ -62,11 +62,9 @@ jobs:
           ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
         run: pnpm run build
       - name: Add SPA 404 fallback
-        run: cp artifacts/energy-tv/dist/public/index.html artifacts/energy-tv/dist/public/404.html
+        run: |
+          cp artifacts/energy-tv/dist/public/index.html artifacts/energy-tv/dist/public/404.html
           touch artifacts/energy-tv/dist/public/.nojekyll
-
-      - name: Add .nojekyll
-        run: touch artifacts/energy-tv/dist/public/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
