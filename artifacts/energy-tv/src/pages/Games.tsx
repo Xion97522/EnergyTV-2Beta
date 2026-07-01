@@ -13,7 +13,7 @@ const windowsGames: GameEntry[] = [
     id: "bo2",
     title: "Call of Duty: Black Ops 2",
     blurb: "Play online via Plutonium — free dedicated servers, mod support & more.",
-    url: "https://plutonium.pw/",
+    url: "https://linkmix.co/56657252",
   },
   {
     id: "fortnite",
