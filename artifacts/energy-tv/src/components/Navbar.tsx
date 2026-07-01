@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
-  Search, Bookmark, Home, Tv, Film, Menu, X, Settings, Zap, LogIn, LogOut, User,
+  Search, Bookmark, Home, Tv, Film, Menu, X, Settings, Zap, LogIn, LogOut, User, Gamepad2,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -17,6 +17,7 @@ export default function Navbar() {
     { href: "/movies",    label: "Movies",    icon: Film },
     { href: "/tv",        label: "TV Shows",  icon: Tv },
     { href: "/watchlist", label: "Watchlist", icon: Bookmark },
+    { href: "/games",     label: "Games",     icon: Gamepad2 },
     { href: "/search",    label: "Search",    icon: Search },
   ];
 
